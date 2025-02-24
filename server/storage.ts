@@ -20,40 +20,10 @@ const ProblemSchema = new mongoose.Schema({
 
 const ProblemModel = mongoose.model('Problem', ProblemSchema);
 
-// Sample problems for testing
-const sampleProblems = [
-  {
-    id: 1,
-    title: "Two Sum",
-    description: "Given an array of integers nums and an integer target, return indices of the two numbers such that they add up to target.",
-    difficulty: "Easy",
-    acceptance_rate: "48%",
-    companies: ["Amazon", "Google", "Facebook"],
-    related_topics: ["Array", "Hash Table"]
-  },
-  {
-    id: 2,
-    title: "Add Two Numbers",
-    description: "You are given two non-empty linked lists representing two non-negative integers. The digits are stored in reverse order, and each of their nodes contains a single digit.",
-    difficulty: "Medium",
-    acceptance_rate: "39%",
-    companies: ["Microsoft", "Apple", "Amazon"],
-    related_topics: ["Linked List", "Math"]
-  }
-];
-
 export class MongoStorage implements IStorage {
   constructor() {
     mongoose.connect(process.env.MONGODB_URL || 'mongodb+srv://taurtk:Neha321@cluster0.hbfko.mongodb.net/?retryWrites=true&w=majority&appName=Cluster0')
-      .then(async () => {
-        console.log('Connected to MongoDB');
-        // Check if we have any problems, if not insert sample problems
-        const count = await ProblemModel.countDocuments();
-        if (count === 0) {
-          await ProblemModel.insertMany(sampleProblems);
-          console.log('Inserted sample problems');
-        }
-      })
+      .then(() => console.log('Connected to MongoDB'))
       .catch((err) => console.error('MongoDB connection error:', err));
   }
 
