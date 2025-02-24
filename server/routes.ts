@@ -47,7 +47,22 @@ const problemTestCases: Record<number, TestCase[]> = {
       expectedOutput: "0"
     }
   ],
-  // Add more problems here...
+  // Median of Two Sorted Arrays (Problem ID: 4)
+  4: [
+    {
+      input: "nums1 = [1,3], nums2 = [2]",
+      expectedOutput: "2.0"
+    },
+    {
+      input: "nums1 = [1,2], nums2 = [3,4]",
+      expectedOutput: "2.5"
+    },
+    {
+      input: "nums1 = [0,0], nums2 = [0,0]",
+      expectedOutput: "0.0"
+    }
+  ],
+  // Add more problems here as we go...
 };
 
 // Validation functions for different problems
@@ -73,8 +88,61 @@ const problemValidators: Record<number, (output: string, expected: string) => bo
     const normalizedExpected = expected.trim().replace(/\s+/g, '');
     return normalizedOutput === normalizedExpected;
   },
-  // Add more validators here...
+  // Median of Two Sorted Arrays validator
+  4: (output: string, expected: string): boolean => {
+    const normalizedOutput = parseFloat(output.trim());
+    const normalizedExpected = parseFloat(expected.trim());
+
+    if (isNaN(normalizedOutput) || isNaN(normalizedExpected)) {
+      return false;
+    }
+
+    // Use a small epsilon for floating-point comparison
+    const epsilon = 0.0001;
+    return Math.abs(normalizedOutput - normalizedExpected) < epsilon;
+  },
+  // Add more validators here as we go...
 };
+
+async function executeCodeWithJudge0(code: string, language: string, input: string): Promise<any> {
+  const submissionResponse = await axios.post(`${JUDGE0_API}/submissions`, {
+    source_code: code,
+    language_id: language === 'python' ? 71 : 63,
+    stdin: input,
+    wait: false
+  }, {
+    headers: {
+      'X-RapidAPI-Host': 'judge0-ce.p.rapidapi.com',
+      'X-RapidAPI-Key': JUDGE0_API_KEY
+    }
+  });
+
+  const token = submissionResponse.data.token;
+
+  // Poll for results
+  let result;
+  for (let i = 0; i < 10; i++) {
+    const response = await axios.get(`${JUDGE0_API}/submissions/${token}`, {
+      headers: {
+        'X-RapidAPI-Host': 'judge0-ce.p.rapidapi.com',
+        'X-RapidAPI-Key': JUDGE0_API_KEY
+      }
+    });
+
+    if (response.data.status?.id > 2) {
+      result = response.data;
+      break;
+    }
+
+    await new Promise(resolve => setTimeout(resolve, 1000));
+  }
+
+  if (!result) {
+    throw new Error('Execution timed out');
+  }
+
+  return result;
+}
 
 export async function registerRoutes(app: Express): Promise<Server> {
   app.get('/api/problems', async (req, res) => {
@@ -111,41 +179,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         const results = [];
 
         for (const test of problemTestCases[problemId]) {
-          const submissionResponse = await axios.post(`${JUDGE0_API}/submissions`, {
-            source_code: code,
-            language_id: language === 'python' ? 71 : 63,
-            stdin: test.input,
-            wait: false
-          }, {
-            headers: {
-              'X-RapidAPI-Host': 'judge0-ce.p.rapidapi.com',
-              'X-RapidAPI-Key': JUDGE0_API_KEY
-            }
-          });
-
-          const token = submissionResponse.data.token;
-
-          // Poll for results
-          let result;
-          for (let i = 0; i < 10; i++) {
-            const response = await axios.get(`${JUDGE0_API}/submissions/${token}`, {
-              headers: {
-                'X-RapidAPI-Host': 'judge0-ce.p.rapidapi.com',
-                'X-RapidAPI-Key': JUDGE0_API_KEY
-              }
-            });
-
-            if (response.data.status?.id > 2) {
-              result = response.data;
-              break;
-            }
-
-            await new Promise(resolve => setTimeout(resolve, 1000));
-          }
-
-          if (!result) {
-            throw new Error('Execution timed out');
-          }
+          const result = await executeCodeWithJudge0(code, language, test.input);
 
           // If compilation error or runtime error, return immediately
           if (result.status.id !== 3) {
@@ -182,43 +216,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
         });
       }
 
-      // For problems without test cases, just execute normally
-      const submissionResponse = await axios.post(`${JUDGE0_API}/submissions`, {
-        source_code: code,
-        language_id: language === 'python' ? 71 : 63,
-        stdin: input,
-        wait: false
-      }, {
-        headers: {
-          'X-RapidAPI-Host': 'judge0-ce.p.rapidapi.com',
-          'X-RapidAPI-Key': JUDGE0_API_KEY
-        }
-      });
-
-      const token = submissionResponse.data.token;
-
-      // Poll for results
-      let result;
-      for (let i = 0; i < 10; i++) {
-        const response = await axios.get(`${JUDGE0_API}/submissions/${token}`, {
-          headers: {
-            'X-RapidAPI-Host': 'judge0-ce.p.rapidapi.com',
-            'X-RapidAPI-Key': JUDGE0_API_KEY
-          }
-        });
-
-        if (response.data.status?.id > 2) {
-          result = response.data;
-          break;
-        }
-
-        await new Promise(resolve => setTimeout(resolve, 1000));
-      }
-
-      if (!result) {
-        throw new Error('Execution timed out');
-      }
-
+      // For problems without test cases yet, execute normally but warn in logs
+      console.warn(`No test cases defined for problem ${problemId}`);
+      const result = await executeCodeWithJudge0(code, language, input);
       res.json(result);
     } catch (err) {
       console.error('Error executing code:', err);
