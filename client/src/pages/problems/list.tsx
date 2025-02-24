@@ -3,9 +3,10 @@ import { Link } from 'wouter';
 import { Card, CardContent } from '@/components/ui/card';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { Badge } from '@/components/ui/badge';
+import type { Problem } from '@shared/schema';
 
 export default function ProblemList() {
-  const { data: problems, isLoading } = useQuery({
+  const { data: problems, isLoading } = useQuery<Problem[]>({
     queryKey: ['/api/problems']
   });
 
@@ -33,8 +34,11 @@ export default function ProblemList() {
                 <CardContent className="p-6">
                   <div className="flex items-center justify-between">
                     <h2 className="text-xl font-semibold">{problem.title}</h2>
-                    <Badge variant={problem.difficulty === 'Easy' ? 'default' : 
-                                 problem.difficulty === 'Medium' ? 'warning' : 'destructive'}>
+                    <Badge variant={
+                      problem.difficulty === 'Easy' ? 'default' : 
+                      problem.difficulty === 'Medium' ? 'secondary' : 
+                      'destructive'
+                    }>
                       {problem.difficulty}
                     </Badge>
                   </div>
