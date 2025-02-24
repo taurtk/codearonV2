@@ -13,6 +13,13 @@ import { PlayIcon, LoaderIcon, CheckCircleIcon, XCircleIcon } from 'lucide-react
 import { useToast } from '@/hooks/use-toast';
 import { editorOptions } from '@/lib/monaco';
 
+interface TestCaseResult {
+  input: string;
+  expectedOutput: string;
+  actualOutput: string;
+  passed: boolean;
+}
+
 interface ExecutionResult {
   status: { id: number; description: string };
   stdout: string;
@@ -35,7 +42,7 @@ export default function ProblemDetail() {
   });
 
   const executeMutation = useMutation({
-    mutationFn: async (variables: { code: string; language: string; input: string }) => {
+    mutationFn: async (variables: { code: string; language: string; input: string; problemId: number }) => {
       const res = await apiRequest('POST', '/api/execute', variables);
       return res.json() as Promise<ExecutionResult>;
     }
@@ -50,7 +57,52 @@ export default function ProblemDetail() {
       description: "Please wait while we process your submission"
     });
 
-    executeMutation.mutate({ code, language, input });
+    executeMutation.mutate({ 
+      code, 
+      language, 
+      input,
+      problemId: Number(id)
+    });
+  };
+
+  const renderTestResults = (stdout: string) => {
+    try {
+      const results = JSON.parse(stdout) as TestCaseResult[];
+      return (
+        <div className="space-y-4">
+          {results.map((result, index) => (
+            <div key={index} className="border rounded-lg p-4">
+              <div className="flex items-center gap-2 mb-2">
+                <span className="font-medium">Test Case {index + 1}</span>
+                {result.passed ? (
+                  <CheckCircleIcon className="h-5 w-5 text-green-500" />
+                ) : (
+                  <XCircleIcon className="h-5 w-5 text-red-500" />
+                )}
+              </div>
+              <div className="grid gap-2 text-sm">
+                <div>
+                  <span className="font-medium">Input:</span> {result.input}
+                </div>
+                <div>
+                  <span className="font-medium">Expected:</span> {result.expectedOutput}
+                </div>
+                <div>
+                  <span className="font-medium">Your Output:</span> {result.actualOutput}
+                </div>
+              </div>
+            </div>
+          ))}
+        </div>
+      );
+    } catch {
+      // If stdout is not JSON, display it normally
+      return (
+        <pre className="whitespace-pre-wrap bg-muted p-4 rounded-md">
+          {stdout}
+        </pre>
+      );
+    }
   };
 
   if (isLoading) {
@@ -159,11 +211,7 @@ export default function ProblemDetail() {
                     Status: {executeMutation.data.status?.description}
                     {executeMutation.data.time && ` (${executeMutation.data.time}s, ${executeMutation.data.memory}KB)`}
                   </div>
-                  {executeMutation.data.stdout && (
-                    <pre className="whitespace-pre-wrap bg-muted p-4 rounded-md">
-                      {executeMutation.data.stdout}
-                    </pre>
-                  )}
+                  {executeMutation.data.stdout && renderTestResults(executeMutation.data.stdout)}
                   {executeMutation.data.stderr && (
                     <pre className="whitespace-pre-wrap bg-destructive/10 text-destructive p-4 rounded-md mt-2">
                       {executeMutation.data.stderr}
