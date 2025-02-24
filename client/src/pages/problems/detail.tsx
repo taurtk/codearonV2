@@ -9,13 +9,26 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Badge } from '@/components/ui/badge';
 import { apiRequest } from '@/lib/queryClient';
 import { Alert, AlertDescription } from '@/components/ui/alert';
-import { PlayIcon, LoaderIcon } from 'lucide-react';
+import { PlayIcon, LoaderIcon, CheckCircleIcon, XCircleIcon } from 'lucide-react';
+import { useToast } from '@/hooks/use-toast';
+import { editorOptions } from '@/lib/monaco';
+
+interface ExecutionResult {
+  status: { id: number; description: string };
+  stdout: string;
+  stderr: string;
+  compile_output: string;
+  message: string;
+  time: string;
+  memory: string;
+}
 
 export default function ProblemDetail() {
   const { id } = useParams();
   const [language, setLanguage] = useState('python');
   const [input, setInput] = useState('');
-  const editorRef = useRef(null);
+  const editorRef = useRef<any>(null);
+  const { toast } = useToast();
 
   const { data: problem, isLoading } = useQuery({
     queryKey: [`/api/problems/${id}`]
@@ -24,13 +37,19 @@ export default function ProblemDetail() {
   const executeMutation = useMutation({
     mutationFn: async (variables: { code: string; language: string; input: string }) => {
       const res = await apiRequest('POST', '/api/execute', variables);
-      return res.json();
+      return res.json() as Promise<ExecutionResult>;
     }
   });
 
   const handleExecute = () => {
     if (!editorRef.current) return;
     const code = editorRef.current.getValue();
+
+    toast({
+      title: "Executing code...",
+      description: "Please wait while we process your submission"
+    });
+
     executeMutation.mutate({ code, language, input });
   };
 
@@ -46,9 +65,13 @@ export default function ProblemDetail() {
   return (
     <div className="p-8 max-w-screen-xl mx-auto">
       <div className="flex items-center gap-4 mb-8">
-        <h1 className="text-3xl font-bold">{problem?.title}</h1>
-        <Badge variant={problem?.difficulty === 'Easy' ? 'default' : 
-                       problem?.difficulty === 'Medium' ? 'warning' : 'destructive'}>
+        <h1 className="text-3xl font-bold text-primary">CodeAron</h1>
+        <h2 className="text-2xl">{problem?.title}</h2>
+        <Badge variant={
+          problem?.difficulty === 'Easy' ? 'default' : 
+          problem?.difficulty === 'Medium' ? 'secondary' : 
+          'destructive'
+        }>
           {problem?.difficulty}
         </Badge>
       </div>
@@ -56,15 +79,26 @@ export default function ProblemDetail() {
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
         <Card>
           <CardContent className="p-6">
-            <div className="prose dark:prose-invert" 
+            <div className="prose dark:prose-invert max-w-none" 
                  dangerouslySetInnerHTML={{ __html: problem?.description }} />
-            
+
             {problem?.companies && (
               <div className="mt-6">
                 <h3 className="text-lg font-semibold mb-2">Companies</h3>
                 <div className="flex gap-2 flex-wrap">
                   {problem.companies.map(company => (
                     <Badge key={company} variant="outline">{company}</Badge>
+                  ))}
+                </div>
+              </div>
+            )}
+
+            {problem?.related_topics && (
+              <div className="mt-4">
+                <h3 className="text-lg font-semibold mb-2">Topics</h3>
+                <div className="flex gap-2 flex-wrap">
+                  {problem.related_topics.map(topic => (
+                    <Badge key={topic} variant="secondary">{topic}</Badge>
                   ))}
                 </div>
               </div>
@@ -99,6 +133,7 @@ export default function ProblemDetail() {
               height="100%"
               defaultLanguage={language}
               theme="vs-dark"
+              options={editorOptions}
               onMount={(editor) => {
                 editorRef.current = editor;
               }}
@@ -112,12 +147,35 @@ export default function ProblemDetail() {
           />
 
           {executeMutation.data && (
-            <Alert>
-              <AlertDescription>
-                <pre className="whitespace-pre-wrap">
-                  {executeMutation.data.stdout || executeMutation.data.stderr}
-                </pre>
-              </AlertDescription>
+            <Alert variant={executeMutation.data.status?.id === 3 ? "default" : "destructive"}>
+              <div className="flex items-start gap-2">
+                {executeMutation.data.status?.id === 3 ? (
+                  <CheckCircleIcon className="h-5 w-5 text-green-500" />
+                ) : (
+                  <XCircleIcon className="h-5 w-5 text-red-500" />
+                )}
+                <AlertDescription>
+                  <div className="font-medium mb-2">
+                    Status: {executeMutation.data.status?.description}
+                    {executeMutation.data.time && ` (${executeMutation.data.time}s, ${executeMutation.data.memory}KB)`}
+                  </div>
+                  {executeMutation.data.stdout && (
+                    <pre className="whitespace-pre-wrap bg-muted p-4 rounded-md">
+                      {executeMutation.data.stdout}
+                    </pre>
+                  )}
+                  {executeMutation.data.stderr && (
+                    <pre className="whitespace-pre-wrap bg-destructive/10 text-destructive p-4 rounded-md mt-2">
+                      {executeMutation.data.stderr}
+                    </pre>
+                  )}
+                  {executeMutation.data.compile_output && (
+                    <pre className="whitespace-pre-wrap bg-warning/10 text-warning p-4 rounded-md mt-2">
+                      {executeMutation.data.compile_output}
+                    </pre>
+                  )}
+                </AlertDescription>
+              </div>
             </Alert>
           )}
         </div>
