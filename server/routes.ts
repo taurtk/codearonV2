@@ -6,44 +6,75 @@ import axios from 'axios';
 const JUDGE0_API = 'https://judge0-ce.p.rapidapi.com';
 const JUDGE0_API_KEY = 'TaKUYaXZrImsh1qNwfJhj1mnisTpp1TuKnSjsnXZ7ftgBBVOP3';
 
-// Test cases for Two Sum problem
-const twoSumTests = [
-  {
-    input: "nums = [2,7,11,15], target = 9",
-    expectedOutput: "[0,1]"
-  },
-  {
-    input: "nums = [3,2,4], target = 6",
-    expectedOutput: "[1,2]"
-  },
-  {
-    input: "nums = [3,3], target = 6",
-    expectedOutput: "[0,1]"
-  }
-];
-
-function normalizeOutput(output: string): string {
-  return output.trim().replace(/\s+/g, '').toLowerCase();
+interface TestCase {
+  input: string;
+  expectedOutput: string;
 }
 
-function validateTwoSum(output: string, expectedOutput: string): boolean {
-  // Convert both outputs to arrays for comparison
-  const normalizedOutput = normalizeOutput(output);
-  const normalizedExpected = normalizeOutput(expectedOutput);
+// Test cases for different problems
+const problemTestCases: Record<number, TestCase[]> = {
+  // Two Sum (Problem ID: 1)
+  1: [
+    {
+      input: "nums = [2,7,11,15], target = 9",
+      expectedOutput: "[0,1]"
+    },
+    {
+      input: "nums = [3,2,4], target = 6",
+      expectedOutput: "[1,2]"
+    },
+    {
+      input: "nums = [3,3], target = 6",
+      expectedOutput: "[0,1]"
+    }
+  ],
+  // Reverse Integer (Problem ID: 2)
+  2: [
+    {
+      input: "123",
+      expectedOutput: "321"
+    },
+    {
+      input: "-123",
+      expectedOutput: "-321"
+    },
+    {
+      input: "120",
+      expectedOutput: "21"
+    },
+    {
+      input: "0",
+      expectedOutput: "0"
+    }
+  ],
+  // Add more problems here...
+};
 
-  // If the output format doesn't match expected format, return false
-  if (!normalizedOutput.startsWith('[') || !normalizedOutput.endsWith(']')) {
-    return false;
-  }
+// Validation functions for different problems
+const problemValidators: Record<number, (output: string, expected: string) => boolean> = {
+  // Two Sum validator
+  1: (output: string, expected: string): boolean => {
+    const normalizedOutput = output.trim().replace(/\s+/g, '').toLowerCase();
+    const normalizedExpected = expected.trim().replace(/\s+/g, '').toLowerCase();
 
-  // Extract numbers from output and expected
-  const outputNums = normalizedOutput.slice(1, -1).split(',').map(Number).sort();
-  const expectedNums = normalizedExpected.slice(1, -1).split(',').map(Number).sort();
+    if (!normalizedOutput.startsWith('[') || !normalizedOutput.endsWith(']')) {
+      return false;
+    }
 
-  // Compare arrays
-  return outputNums.length === expectedNums.length && 
-         outputNums.every((num, idx) => num === expectedNums[idx]);
-}
+    const outputNums = normalizedOutput.slice(1, -1).split(',').map(Number).sort();
+    const expectedNums = normalizedExpected.slice(1, -1).split(',').map(Number).sort();
+
+    return outputNums.length === expectedNums.length && 
+           outputNums.every((num, idx) => num === expectedNums[idx]);
+  },
+  // Reverse Integer validator
+  2: (output: string, expected: string): boolean => {
+    const normalizedOutput = output.trim().replace(/\s+/g, '');
+    const normalizedExpected = expected.trim().replace(/\s+/g, '');
+    return normalizedOutput === normalizedExpected;
+  },
+  // Add more validators here...
+};
 
 export async function registerRoutes(app: Express): Promise<Server> {
   app.get('/api/problems', async (req, res) => {
@@ -74,15 +105,15 @@ export async function registerRoutes(app: Express): Promise<Server> {
     const { code, language, input, problemId } = req.body;
 
     try {
-      // For Two Sum problem (id: 1), run against all test cases
-      if (problemId === 1) {
+      // Check if we have test cases for this problem
+      if (problemTestCases[problemId]) {
         let allTestsPassed = true;
         const results = [];
 
-        for (const test of twoSumTests) {
+        for (const test of problemTestCases[problemId]) {
           const submissionResponse = await axios.post(`${JUDGE0_API}/submissions`, {
             source_code: code,
-            language_id: language === 'python' ? 71 : 63, // 71 for Python, 63 for JavaScript
+            language_id: language === 'python' ? 71 : 63,
             stdin: test.input,
             wait: false
           }, {
@@ -121,8 +152,12 @@ export async function registerRoutes(app: Express): Promise<Server> {
             return res.json(result);
           }
 
-          // Validate output against expected output
-          const isCorrect = validateTwoSum(result.stdout, test.expectedOutput);
+          // Validate output against expected output using the appropriate validator
+          const validator = problemValidators[problemId];
+          const isCorrect = validator 
+            ? validator(result.stdout, test.expectedOutput)
+            : result.stdout.trim() === test.expectedOutput.trim();
+
           if (!isCorrect) {
             allTestsPassed = false;
           }
@@ -147,7 +182,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         });
       }
 
-      // For other problems, just execute normally
+      // For problems without test cases, just execute normally
       const submissionResponse = await axios.post(`${JUDGE0_API}/submissions`, {
         source_code: code,
         language_id: language === 'python' ? 71 : 63,
