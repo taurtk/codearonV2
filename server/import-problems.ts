@@ -40,22 +40,17 @@ async function importProblems() {
       });
     });
 
-    // Log the first record to see the structure
-    console.log('Sample record:', records[0]);
-
+    // Transform CSV records to problems
     const problems = (records as any[]).map((record, index) => ({
       id: index + 1,
-      title: record.Title || 'Unknown Problem',
-      description: record.Description || 'No description available',
-      difficulty: record.Difficulty || 'Medium',
-      acceptance_rate: record['Acceptance Rate'] || null,
-      solution_link: record['Solution Link'] || null,
-      companies: record.Companies ? record.Companies.split(',').map((c: string) => c.trim()).filter(Boolean) : [],
-      related_topics: record.Topics ? record.Topics.split(',').map((t: string) => t.trim()).filter(Boolean) : []
+      title: record.title || 'Unknown Problem',
+      description: record.description || 'No description available',
+      difficulty: record.difficulty || 'Medium',
+      acceptance_rate: record.acceptance_rate || null,
+      solution_link: record.solution_link || null,
+      companies: record.companies ? record.companies.split(',').map((c: string) => c.trim()).filter(Boolean) : [],
+      related_topics: record.related_topics ? record.related_topics.split(',').map((t: string) => t.trim()).filter(Boolean) : []
     }));
-
-    // Log a sample problem to verify the transformation
-    console.log('Sample transformed problem:', problems[0]);
 
     await ProblemModel.insertMany(problems);
     console.log(`Imported ${problems.length} problems successfully`);

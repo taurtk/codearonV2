@@ -28,34 +28,44 @@ export class MongoStorage implements IStorage {
   }
 
   async getProblems(): Promise<Problem[]> {
-    const problems = await ProblemModel.find().lean();
-    console.log('Found problems:', problems);
-    return problems.map(p => ({
-      id: p.id,
-      title: p.title || '',
-      description: p.description || '',
-      difficulty: p.difficulty || '',
-      acceptance_rate: p.acceptance_rate || null,
-      solution_link: p.solution_link || null,
-      companies: p.companies || null,
-      related_topics: p.related_topics || null
-    }));
+    try {
+      const problems = await ProblemModel.find().lean();
+      console.log('Found problems:', problems[0]); // Log first problem to verify data
+      return problems.map(p => ({
+        id: p.id,
+        title: p.title,
+        description: p.description,
+        difficulty: p.difficulty,
+        acceptance_rate: p.acceptance_rate || null,
+        solution_link: p.solution_link || null,
+        companies: p.companies || [],
+        related_topics: p.related_topics || []
+      }));
+    } catch (error) {
+      console.error('Error fetching problems:', error);
+      throw error;
+    }
   }
 
   async getProblem(id: number): Promise<Problem | null> {
-    const problem = await ProblemModel.findOne({ id }).lean();
-    if (!problem) return null;
+    try {
+      const problem = await ProblemModel.findOne({ id }).lean();
+      if (!problem) return null;
 
-    return {
-      id: problem.id,
-      title: problem.title || '',
-      description: problem.description || '',
-      difficulty: problem.difficulty || '',
-      acceptance_rate: problem.acceptance_rate || null,
-      solution_link: problem.solution_link || null,
-      companies: problem.companies || null,
-      related_topics: problem.related_topics || null
-    };
+      return {
+        id: problem.id,
+        title: problem.title,
+        description: problem.description,
+        difficulty: problem.difficulty,
+        acceptance_rate: problem.acceptance_rate || null,
+        solution_link: problem.solution_link || null,
+        companies: problem.companies || [],
+        related_topics: problem.related_topics || []
+      };
+    } catch (error) {
+      console.error('Error fetching problem:', error);
+      throw error;
+    }
   }
 }
 
