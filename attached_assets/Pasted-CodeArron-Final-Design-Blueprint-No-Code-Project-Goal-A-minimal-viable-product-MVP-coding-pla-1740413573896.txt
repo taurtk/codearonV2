@@ -1,0 +1,197 @@
+CodeArron: Final Design Blueprint (No Code)
+Project Goal: A minimal viable product (MVP) coding platform allowing users to select problems from a curated dataset, write code in Python or Node.js, execute their code, and view the results.
+
+I. Overall Architecture:
+
+Client (React.js):
+
+Presents the user interface, including problem lists, descriptions, code editor, input area, and output display.
+
+Handles user interactions (e.g., selecting a problem, writing code, submitting code).
+
+Communicates with the backend API using HTTP requests (axios).
+
+API (Django REST Framework):
+
+Provides endpoints for:
+
+Retrieving problem lists.
+
+Retrieving problem details (including test cases).
+
+Submitting code for execution.
+
+Authenticates and authorizes requests (minimal in the MVP, potentially expanded later).
+
+Transforms data between the React frontend and the MongoDB database.
+
+Communicates with the Judge0 service to execute code.
+
+Data Storage (MongoDB):
+
+Stores problem data (title, description, difficulty, tags, test cases).
+
+Designed for flexibility and easy querying of JSON-like data.
+
+Code Execution (Judge0):
+
+Receives code and input from the Django backend.
+
+Executes the code in a sandboxed environment.
+
+Returns the output (stdout, stderr) to the Django backend.
+
+II. Component Design & Data Flow:
+
+A. Data Acquisition:
+
+Source: Problems curated from LeetCode’s “Top 100 Liked Questions” list and saved as problems.json (as described previously to address copyright issues).
+
+Import: The seed_problems.py Django management command imports the data into MongoDB. This command is located in the problems/management/commands directory.
+
+B. Problem List:
+
+React Component: ProblemList.js
+
+Data Fetch: Fetches a list of problems from the Django API endpoint /api/problems/.
+
+Data: The API returns an array of problem objects, each containing the problem's id, title, and difficulty.
+
+Display: Presents the problems as a list of clickable links. Each link navigates to the ProblemDetail component.
+
+C. Problem Detail:
+
+React Component: ProblemDetail.js
+
+Data Fetch: Fetches the details of a selected problem from the Django API endpoint /api/problems/{id}/ (where {id} is the problem's unique ID).
+
+Data: The API returns a single problem object, containing all fields: id, title, description, difficulty, tags, and test_cases.
+
+Display:
+
+Problem Title and Description.
+
+Tags (rendered as a list).
+
+Test Cases (displayed as input/expected output pairs).
+
+Code Editor (Monaco Editor): Allows the user to write code. Includes a language selection dropdown (Python/Node.js).
+
+Input Area: Allows the user to enter custom input for the code. This is extremely important for testing the submitted code.
+
+"Run Code" Button: Triggers the code execution process.
+
+Output Display: Displays the output (stdout or stderr) from Judge0.
+
+D. Code Execution:
+
+User Action: The user clicks the "Run Code" button in the ProblemDetail component.
+
+Data Send: The React component sends an HTTP POST request to the Django API endpoint /api/run/. The request body contains:
+
+code: The code written by the user in the editor.
+
+language: The selected language (e.g., "python" or "nodejs").
+
+test_input: Input from the user.
+
+Django API (RunCodeView):
+
+Receives the code and language from the React frontend.
+
+Constructs a request to the Judge0 API, including the code, language ID (71 for Python, 63 for Node.js), and the user's input (test_input).
+
+Sends the request to the Judge0 API.
+
+Receives the response from Judge0 (which includes a token).
+
+Polls the Judge0 API for the result.
+
+Returns the output (stdout, stderr) from Judge0 to the React frontend.
+
+React Component (ProblemDetail):
+
+Receives the output from the Django API.
+
+Displays the output (stdout or stderr) in the output display area.
+
+III. Technology Stack & Key Components:
+
+Frontend (React.js):
+
+React (UI framework)
+
+React Router (navigation)
+
+Axios (HTTP client)
+
+Monaco Editor (code editor)
+
+Backend (Django REST Framework):
+
+Django (web framework)
+
+Django REST Framework (API framework)
+
+Djongo (MongoDB adapter)
+
+Requests (HTTP client for Judge0 communication)
+
+Database (MongoDB):
+
+MongoDB (NoSQL database)
+
+Code Execution (Judge0):
+
+Judge0 (open-source code execution engine)
+
+IV. Deployment (MVP):
+
+Local Development: Docker Compose to orchestrate React, Django, MongoDB, and Judge0.
+
+Cloud Deployment:
+
+Frontend (React): Vercel, Netlify, or similar.
+
+Backend (Django): Heroku, Railway, or similar.
+
+Database (MongoDB): MongoDB Atlas.
+
+Judge0: Can initially use the Judge0 public API (for testing purposes). For production, deploy your own Judge0 instance on a cloud provider like DigitalOcean or AWS.
+
+V. Data Flow Diagram:
+
+text
++---------------------+     +-----------------------+     +-------------------+     +-----------------+
+|  React Frontend     | --> |  Django REST API      | --> |  MongoDB Database |     |   Judge0        |
+| (ProblemList/Detail) |     |  (ProblemListView/    |     |  (Problem Data)     | --> | (Code Execution) |
+|                     |     |   ProblemDetailView/    |     |                   |     |                 |
+|                     |     |   RunCodeView)        |     |                   |     |                 |
++---------------------+     +-----------------------+     +-------------------+     +-----------------+
+                                     ^                                                 |
+                                     |                                                 |
+                                     +---------------------------------------------------+
+                                                      (Code & Input)
+                                     +---------------------------------------------------+
+                                     |
+                                     V
+                             +-----------------------+
+                             |      Judge0 API        |
+                             |   (Output: stdout/stderr)  |
+                             +-----------------------+
+
+VI. MVP Considerations and Simplifications:
+
+User Authentication/Authorization: Omitted in the MVP to simplify development. Could be added in a later iteration.
+
+Database Schema: Minimal and focused on storing problem and test case data.
+
+Testing: Basic unit tests for Django API endpoints. Limited end-to-end testing in the MVP.
+
+Scalability: Not a primary focus of the MVP. Consider scalability in later iterations.
+
+Code Optimization: Prioritize code clarity and functionality over performance optimization in the MVP.
+
+wait:true REMOVAL: Remember that wait: true is only for the MVP. For a production system, you must implement asynchronous result polling from Judge0.
+
+This final design blueprint provides a comprehensive overview of the CodeArron platform. Remember to focus on building a working MVP first and then iterate to add more features and improve performance.
