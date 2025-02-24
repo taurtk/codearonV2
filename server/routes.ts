@@ -9,8 +9,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.get('/api/problems', async (req, res) => {
     try {
       const problems = await storage.getProblems();
+      console.log('Fetched problems:', problems);
       res.json(problems);
     } catch (err) {
+      console.error('Error fetching problems:', err);
       res.status(500).json({ error: 'Failed to fetch problems' });
     }
   });
@@ -23,6 +25,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       }
       res.json(problem);
     } catch (err) {
+      console.error('Error fetching problem:', err);
       res.status(500).json({ error: 'Failed to fetch problem' });
     }
   });
@@ -55,6 +58,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
       res.json(result.data);
     } catch (err) {
+      console.error('Error executing code:', err);
       res.status(500).json({ error: 'Code execution failed' });
     }
   });
